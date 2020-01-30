@@ -345,7 +345,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 	mytable cur_table;
     // check syscall validity
     if (syscall > 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) return -EINVAL;
-	cur_table == table[syscall];
+	cur_table = table[syscall];
     // if cmd is 1 of the first 2
     if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
         // check if user is root
@@ -481,7 +481,7 @@ static void exit_function(void)
 	sys_call_table[MY_CUSTOM_SYSCALL] = orig_custom_syscall;
 	set_addr_ro((unsigned long) sys_call_table);
     // free memory used
-    for (i = table.length - 1; i >= 0; i--) {
+    for (i = NR_syscalls; i >= 0; i--) {
         // free space of current table
         if (table[i].f) kfree(table[i].f);
         destroy_list(i);
