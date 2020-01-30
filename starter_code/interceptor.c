@@ -344,7 +344,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
     // TODO: spinlocks checks!
 	mytable cur_table;
     // check syscall validity
-    if (syscall > 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) return -EINVAL;
+    if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) return -EINVAL;
 	cur_table = table[syscall];
     // if cmd is 1 of the first 2
     if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
