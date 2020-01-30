@@ -13,7 +13,7 @@
 
 
 MODULE_DESCRIPTION("My kernel module");
-MODULE_AUTHOR("Me");
+MODULE_AUTHOR("Hoang Nguyen - Nhi Nguyen - Richard Gao");
 MODULE_LICENSE("GPL");
 
 //----- System Call Table Stuff ------------------------------------
@@ -72,7 +72,7 @@ typedef struct {
 	/* List of monitored PIDs */
 	int listcount;
 	struct list_head my_list;
-}mytable;
+} mytable;
 
 /* An entry for each system call */
 mytable table[NR_syscalls+1];
@@ -96,7 +96,7 @@ spinlock_t calltable_lock = SPIN_LOCK_UNLOCKED;
  */
 static int add_pid_sysc(pid_t pid, int sysc)
 {
-	struct pid_list *ple=(struct pid_list*)kmalloc(sizeof(struct pid_list), GFP_KERNEL);
+	struct pid_list *ple=(struct pid_list*) kmalloc(sizeof(struct pid_list), GFP_KERNEL);
 
 	if (!ple)
 		return -ENOMEM;
@@ -254,9 +254,6 @@ void my_exit_group(int status)
 {	
 	del_pid(current->pid);
 	orig_exit_group(status);
-
-
-
 }
 //----------------------------------------------------------------
 
@@ -279,11 +276,11 @@ void my_exit_group(int status)
  * - Don't forget to call the original system call, so we allow processes to proceed as normal.
  */
 asmlinkage long interceptor(struct pt_regs reg) {
-
-
-
-
-
+    int syscall = reg.r7;
+    if (check_pid_monitored(syscall, current->pid) == 1) {
+        log_message(current->pid, reg.r7, reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di);
+    }
+    table[syscall].f();
 	return 0; // Just a placeholder, so it compiles with no warnings!
 }
 
@@ -368,26 +365,34 @@ long (*orig_custom_syscall)(void);
  * - Ensure synchronization as needed.
  */
 static int init_function(void) {
+    // initialize spin locks
+    spin_lock_init(&pidlist_lock);
+    spin_lock_init(&calltable_lock);
 	//set system call table to writeable
-	set_addr_rw(sys_call_table);
+    spin_lock(&calltable_lock);
+	set_addr_rw((unsigned long) sys_call_table);
 	// store the original exit group syscall
 	orig_exit_group = sys_call_table[__NR_exit_group];
 	// replace with our custom exit group
 	sys_call_table[__NR_exit_group] = my_exit_group;
-
 	// store the orginial custom system call and replace it with MY_CUSTOM_SYSCALL
-	orig_custom_syscall = sys_call_table[0];
-	sys_call_table[MY_CUSTOM_SYSCALL] =my_syscall;
+	orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
+	sys_call_table[MY_CUSTOM_SYSCALL] = my_syscall;
 	//set system call table to read only
-	set_addr_ro(sys_call_table);
-
-	/*
-	Need to initializations for bookkeeping
-	*/
-
-	
-
-
+	set_addr_ro((unsigned long) sys_call_table);
+	// bookkeeping intialization
+    int i;
+    struct mytable* cur_table;
+    for (i = table.length - 1; i >= 0; i--) {
+        cur_table = (struct mytable*) kmalloc(sizeof(struct mytable), GFP_KERNEL);
+        if (!cur_table) return -ENOMEM;
+        cur_table->f = sys_call_table[i];
+        cur_table->intercepted = 0;
+        cur_table->monitored = 0;
+        cur_table->listcount = 0;
+        INIT_LIST_HEAD(&cur_table->my_list)
+    }
+    spin_unlock(&calltable_lock);
 	return 0;
 }
 
@@ -403,14 +408,21 @@ static int init_function(void) {
  */
 static void exit_function(void)
 {        
-
-	set_addr_rw(sys_call_table);
-
+    spin_lock_init(&calltable_lock);
+    // restore syscalls
+	set_addr_rw((unsigned long) sys_call_table);
 	sys_call_table[__NR_exit_group] = orig_exit_group;
 	sys_call_table[MY_CUSTOM_SYSCALL] = orig_custom_syscall;
-
-	set_addr_ro(sys_call_table);
-	// check for synchronization
+	set_addr_ro((unsigned long) sys_call_table);
+    // free memory used
+    int i;
+    struct mytable* cur_table;
+    for (i = table.length - 1; i >= 0; i--) {
+        // free space of current table
+        destroy_list(i);
+        free(table[i]);
+    }
+	spin_unlock(&calltable_lock);
 }
 
 module_init(init_function);
