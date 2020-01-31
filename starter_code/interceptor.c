@@ -276,6 +276,7 @@ void my_exit_group(int status)
  * - Don't forget to call the original system call, so we allow processes to proceed as normal.
  */
 asmlinkage long interceptor(struct pt_regs reg) {
+    spin_lock(&pidlist_lock);
     mytable cur_table = table[reg.ax];
     int monitored = cur_table.monitored;
     // if the current pid is monitored
@@ -286,6 +287,7 @@ asmlinkage long interceptor(struct pt_regs reg) {
 			log_message(current->pid, reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp);
 		}
     }
+    spin_unlock(&pidlist_lock);
     // continue
     cur_table.f(reg);
 	return 0; // Just a placeholder, so it compiles with no warnings!
@@ -436,8 +438,8 @@ static int init_function(void) {
 	mytable cur_table;
     printk(KERN_DEBUG "Started init");
     // initialize spin locks
-    spin_lock_init(&pidlist_lock);
-    spin_lock_init(&calltable_lock);
+    // spin_lock_init(&pidlist_lock);
+    // spin_lock_init(&calltable_lock);
 	//set system call table to writeable
     spin_lock(&calltable_lock);
 	set_addr_rw((unsigned long) sys_call_table);
@@ -451,6 +453,7 @@ static int init_function(void) {
 	//set system call table to read only
 	set_addr_ro((unsigned long) sys_call_table);
     spin_unlock(&calltable_lock);
+    spin_lock(&pidlist_lock);
 	// bookkeeping intialization
     for (i = NR_syscalls; i >= 0; i--) {
         cur_table.f = sys_call_table[i];
@@ -459,6 +462,7 @@ static int init_function(void) {
         cur_table.listcount = 0;
         INIT_LIST_HEAD(&cur_table.my_list);
     }
+    spin_unlock(&pidlist_lock);
     printk(KERN_DEBUG "ending init");
 	return 0;
 }
@@ -482,13 +486,15 @@ static void exit_function(void)
 	sys_call_table[__NR_exit_group] = orig_exit_group;
 	sys_call_table[MY_CUSTOM_SYSCALL] = orig_custom_syscall;
 	set_addr_ro((unsigned long) sys_call_table);
+    spin_unlock(&calltable_lock);
     // free memory used
+    spin_lock(&pidlist_lock);
     for (i = NR_syscalls; i >= 0; i--) {
         // free space of current table
         if (table[i].f) kfree(table[i].f);
         destroy_list(i);
     }
-	spin_unlock(&calltable_lock);
+    spin_unlock(&pidlist_lock);
 }
 
 module_init(init_function);
