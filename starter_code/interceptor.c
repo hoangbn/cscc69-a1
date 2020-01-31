@@ -434,7 +434,7 @@ long (*orig_custom_syscall)(void);
 static int init_function(void) {
 	int i;
 	mytable cur_table;
-    kprint(KERN_DEBUG "Started init");
+    printk(KERN_DEBUG "Started init");
     // initialize spin locks
     spin_lock_init(&pidlist_lock);
     spin_lock_init(&calltable_lock);
@@ -459,7 +459,7 @@ static int init_function(void) {
         cur_table.listcount = 0;
         INIT_LIST_HEAD(&cur_table.my_list);
     }
-    kprint(KERN_DEBUG "ending init");
+    printk(KERN_DEBUG "ending init");
 	return 0;
 }
 
