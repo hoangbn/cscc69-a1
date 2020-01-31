@@ -276,7 +276,6 @@ void my_exit_group(int status)
  * - Don't forget to call the original system call, so we allow processes to proceed as normal.
  */
 asmlinkage long interceptor(struct pt_regs reg) {
-    spin_lock(&pidlist_lock);
     mytable cur_table = table[reg.ax];
     int monitored = cur_table.monitored;
     // if the current pid is monitored
@@ -287,7 +286,6 @@ asmlinkage long interceptor(struct pt_regs reg) {
 			log_message(current->pid, reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp);
 		}
     }
-    spin_unlock(&pidlist_lock);
     // continue
     cur_table.f(reg);
 	return 0; // Just a placeholder, so it compiles with no warnings!
