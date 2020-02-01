@@ -279,6 +279,7 @@ asmlinkage long interceptor(struct pt_regs reg) {
     mytable cur_table = table[reg.ax];
     int monitored = cur_table.monitored;
     // if the current pid is monitored
+    spin_lock(&calltable_lock);
     if (monitored != 0) {
 		int pid_in_list = check_pid_monitored(reg.ax, current->pid);
 		// log if monitored, and pid in list or everything is monitored and pid not blacklisted
@@ -286,9 +287,9 @@ asmlinkage long interceptor(struct pt_regs reg) {
 			log_message(current->pid, reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp);
 		}
     }
+    spin_unlock(&calltable_lock);
     // continue
-    cur_table.f(reg);
-	return 0; // Just a placeholder, so it compiles with no warnings!
+	return cur_table.f(reg); // Just a placeholder, so it compiles with no warnings!
 }
 
 /**
@@ -476,15 +477,15 @@ static void exit_function(void)
 {        
 	int i;
     // free memory used
-    spin_lock(&pidlist_lock);
-    for (i = NR_syscalls; i >= 0; i--) {
-        // restore original syscall if it was intercepted
-        // if (table[i].intercepted == 1) {
-        //     my_syscall(REQUEST_SYSCALL_RELEASE, i, i);
-        // }
-        // destroy_list(i);
-    }
-    spin_unlock(&pidlist_lock);
+    // spin_lock(&pidlist_lock);
+    // for (i = NR_syscalls; i >= 0; i--) {
+    //     // restore original syscall if it was intercepted
+    //     // if (table[i].intercepted == 1) {
+    //     //     my_syscall(REQUEST_SYSCALL_RELEASE, i, i);
+    //     // }
+    //     // destroy_list(i);
+    // }
+    // spin_unlock(&pidlist_lock);
     // restore syscalls
     spin_lock(&calltable_lock);
 	set_addr_rw((unsigned long) sys_call_table);
