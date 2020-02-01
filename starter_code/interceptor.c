@@ -440,13 +440,13 @@ static int init_function(void) {
     // spin_lock_init(&calltable_lock);
 	//set system call table to writeable
     // spin_lock(&calltable_lock);
+    orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
+orig_exit_group = sys_call_table[__NR_exit_group];
 	set_addr_rw((unsigned long) sys_call_table);
 	// store the original exit group syscall
-	orig_exit_group = sys_call_table[__NR_exit_group];
 	// replace with our custom exit group
 	sys_call_table[__NR_exit_group] = my_exit_group;
 	// store the orginial custom system call and replace it with MY_CUSTOM_SYSCALL
-	orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
 	sys_call_table[MY_CUSTOM_SYSCALL] = my_syscall;
 	//set system call table to read only
 	set_addr_ro((unsigned long) sys_call_table);
