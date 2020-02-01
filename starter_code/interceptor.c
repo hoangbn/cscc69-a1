@@ -348,28 +348,31 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
     if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) return -EINVAL;
 	cur_table = table[syscall];
     // if cmd is 1 of the first 2
-    // if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
-    //     // check if user is root
-    //     if (current_uid() != 0) return -EPERM;
-    //     // if intercepting
-    //     if (cmd == REQUEST_SYSCALL_INTERCEPT) {
-    //         // return busy if syscall was already intercepted
-    //         if (cur_table.intercepted != 0) return -EBUSY;
-    //         spin_lock(&calltable_lock);
-    //         set_addr_rw((unsigned long)sys_call_table);
-    //         cur_table.f = sys_call_table[syscall];
-    //         sys_call_table[syscall] = interceptor;
-    //         spin_unlock(&calltable_lock);
-    //         cur_table.intercepted = 1;
-    //     } else { // if trying to release
-    //         // return invalid if call was never intercepted before
-    //         if (cur_table.intercepted != 1) return -EINVAL;
-    //         set_addr_rw((unsigned long)sys_call_table);
-    //         sys_call_table[syscall] = cur_table.f;
-    //         spin_unlock(&calltable_lock);
-    //         cur_table.intercepted = 0;
-    //     }
-    // }
+    if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
+        // check if user is root
+        if (current_uid() != 0) return -EPERM;
+        // if intercepting
+        if (cmd == REQUEST_SYSCALL_INTERCEPT) {
+            // return busy if syscall was already intercepted
+            if (cur_table.intercepted != 0) return -EBUSY;
+            spin_lock(&calltable_lock);
+            set_addr_rw((unsigned long) sys_call_table);
+            cur_table.f = sys_call_table[syscall];
+            set_addr_ro((unsigned long) sys_call_table);
+            sys_call_table[syscall] = interceptor;
+            spin_unlock(&calltable_lock);
+            cur_table.intercepted = 1;
+        } else { // if trying to release
+            // return invalid if call was never intercepted before
+            if (cur_table.intercepted != 1) return -EINVAL;
+            set_addr_rw((unsigned long) sys_call_table);
+            sys_call_table[syscall] = cur_table.f;
+            set_addr_ro((unsigned long) sys_call_table);
+            destroy_list(syscall);
+            spin_unlock(&calltable_lock);
+            cur_table.intercepted = 0;
+        }
+    }
     // else { // if cmd is 1 of 2 last
     //     // check pid validity
     //     if (pid < 0 || pid_task(find_vpid(pid), PIDTYPE_PID) == NULL) return -EINVAL;
