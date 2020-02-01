@@ -252,8 +252,8 @@ void (*orig_exit_group)(int);
  */
 void my_exit_group(int status)
 {	
-	// del_pid(current->pid);
-	// (*orig_exit_group)(status);
+	del_pid(current->pid);
+	orig_exit_group(status);
 }
 //----------------------------------------------------------------
 
@@ -432,33 +432,33 @@ long (*orig_custom_syscall)(void);
  * - Ensure synchronization as needed.
  */
 static int init_function(void) {
-	// int i;
-	// mytable cur_table;
-    // printk(KERN_DEBUG "Started init");
-    // initialize spin locks
-    // spin_lock_init(&pidlist_lock);
-    // spin_lock_init(&calltable_lock);
-    // spin_lock(&calltable_lock);
-    // store the original exit group syscall, and custom syscall
+	int i;
+	mytable cur_table;
+    printk(KERN_DEBUG "Started init");
+    initialize spin locks
+    spin_lock_init(&pidlist_lock);
+    spin_lock_init(&calltable_lock);
+    spin_lock(&calltable_lock);
+    store the original exit group syscall, and custom syscall
     orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
     orig_exit_group = sys_call_table[__NR_exit_group];
     // replace with our custom exit group, and my custom syscall
 	set_addr_rw((unsigned long) sys_call_table);
-	sys_call_table[__NR_exit_group] = my_exit_group;
-	sys_call_table[MY_CUSTOM_SYSCALL] = &my_syscall;
+	// sys_call_table[__NR_exit_group] = my_exit_group;
+	sys_call_table[MY_CUSTOM_SYSCALL] = my_syscall;
 	set_addr_ro((unsigned long) sys_call_table);
-    // spin_unlock(&calltable_lock);
-	// bookkeeping intialization
-    // spin_lock(&pidlist_lock);
-    // for (i = NR_syscalls; i >= 0; i--) {
-    //     cur_table.f = sys_call_table[i];
-    //     cur_table.intercepted = 0;
-    //     cur_table.monitored = 0;
-    //     cur_table.listcount = 0;
-    //     INIT_LIST_HEAD(&cur_table.my_list);
-    // }
-    // spin_unlock(&pidlist_lock);
-    // printk(KERN_DEBUG "ending init");
+    spin_unlock(&calltable_lock);
+	bookkeeping intialization
+    spin_lock(&pidlist_lock);
+    for (i = NR_syscalls; i >= 0; i--) {
+        cur_table.f = sys_call_table[i];
+        cur_table.intercepted = 0;
+        cur_table.monitored = 0;
+        cur_table.listcount = 0;
+        INIT_LIST_HEAD(&cur_table.my_list);
+    }
+    spin_unlock(&pidlist_lock);
+    printk(KERN_DEBUG "ending init");
 	return 0;
 }
 
@@ -474,22 +474,22 @@ static int init_function(void) {
  */
 static void exit_function(void)
 {        
-	// int i;
-    // spin_lock(&calltable_lock);
-    // restore syscalls
+	int i;
+    spin_lock(&calltable_lock);
+    restore syscalls
 	set_addr_rw((unsigned long) sys_call_table);
 	sys_call_table[__NR_exit_group] = orig_exit_group;
 	sys_call_table[MY_CUSTOM_SYSCALL] = orig_custom_syscall;
 	set_addr_ro((unsigned long) sys_call_table);
-    // spin_unlock(&calltable_lock);
-    // // free memory used
-    // spin_lock(&pidlist_lock);
-    // for (i = NR_syscalls; i >= 0; i--) {
-    //     // free space of current table
-    //     if (table[i].f) kfree(table[i].f);
-    //     destroy_list(i);
-    // }
-    // spin_unlock(&pidlist_lock);
+    spin_unlock(&calltable_lock);
+    // free memory used
+    spin_lock(&pidlist_lock);
+    for (i = NR_syscalls; i >= 0; i--) {
+        // free space of current table
+        if (table[i].f) kfree(table[i].f);
+        destroy_list(i);
+    }
+    spin_unlock(&pidlist_lock);
 }
 
 module_init(init_function);
