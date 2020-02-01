@@ -443,10 +443,10 @@ static int init_function(void) {
     orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
     orig_exit_group = sys_call_table[__NR_exit_group];
     // replace with our custom exit group, and my custom syscall
-	// set_addr_rw((unsigned long) sys_call_table);
+	set_addr_rw((unsigned long) sys_call_table);
 	// sys_call_table[__NR_exit_group] = my_exit_group;
 	// sys_call_table[MY_CUSTOM_SYSCALL] = my_syscall;
-	// set_addr_ro((unsigned long) sys_call_table);
+	set_addr_ro((unsigned long) sys_call_table);
     // spin_unlock(&calltable_lock);
 	// bookkeeping intialization
     // spin_lock(&pidlist_lock);
