@@ -440,9 +440,9 @@ static int init_function(void) {
     // spin_lock_init(&calltable_lock);
     // spin_lock(&calltable_lock);
     // store the original exit group syscall, and custom syscall
-    // orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
-    // orig_exit_group = sys_call_table[__NR_exit_group];
-    // // replace with our custom exit group, and my custom syscall
+    orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
+    orig_exit_group = sys_call_table[__NR_exit_group];
+    // replace with our custom exit group, and my custom syscall
 	// set_addr_rw((unsigned long) sys_call_table);
 	// sys_call_table[__NR_exit_group] = my_exit_group;
 	// sys_call_table[MY_CUSTOM_SYSCALL] = my_syscall;
