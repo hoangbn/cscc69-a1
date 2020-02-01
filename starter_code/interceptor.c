@@ -444,7 +444,7 @@ static int init_function(void) {
     orig_exit_group = sys_call_table[__NR_exit_group];
     // replace with our custom exit group, and my custom syscall
 	set_addr_rw((unsigned long) sys_call_table);
-	sys_call_table[__NR_exit_group] = &my_exit_group;
+	// sys_call_table[__NR_exit_group] = &my_exit_group;
 	sys_call_table[MY_CUSTOM_SYSCALL] = &my_syscall;
 	set_addr_ro((unsigned long) sys_call_table);
     // spin_unlock(&calltable_lock);
@@ -477,10 +477,10 @@ static void exit_function(void)
 	// int i;
     // spin_lock(&calltable_lock);
     // restore syscalls
-	// set_addr_rw((unsigned long) sys_call_table);
-	// sys_call_table[__NR_exit_group] = orig_exit_group;
-	// sys_call_table[MY_CUSTOM_SYSCALL] = orig_custom_syscall;
-	// set_addr_ro((unsigned long) sys_call_table);
+	set_addr_rw((unsigned long) sys_call_table);
+	sys_call_table[__NR_exit_group] = orig_exit_group;
+	sys_call_table[MY_CUSTOM_SYSCALL] = orig_custom_syscall;
+	set_addr_ro((unsigned long) sys_call_table);
     // spin_unlock(&calltable_lock);
     // // free memory used
     // spin_lock(&pidlist_lock);
