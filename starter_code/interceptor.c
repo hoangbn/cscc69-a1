@@ -252,7 +252,7 @@ void (*orig_exit_group)(int);
  */
 void my_exit_group(int status)
 {	
-	del_pid(current->pid);
+	// del_pid(current->pid);
 	// (*orig_exit_group)(status);
 }
 //----------------------------------------------------------------
