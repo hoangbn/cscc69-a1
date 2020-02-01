@@ -342,12 +342,12 @@ asmlinkage long interceptor(struct pt_regs reg) {
  *   you might be holding, before you exit the function (including error cases!).  
  */
 asmlinkage long my_syscall(int cmd, int syscall, int pid) {
-    // // TODO: spinlocks checks!
-	// mytable cur_table;
-    // // check syscall validity
-    // if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) return -EINVAL;
-	// cur_table = table[syscall];
-    // // if cmd is 1 of the first 2
+    // TODO: spinlocks checks!
+	mytable cur_table;
+    // check syscall validity
+    if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) return -EINVAL;
+	cur_table = table[syscall];
+    // if cmd is 1 of the first 2
     // if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
     //     // check if user is root
     //     if (current_uid() != 0) return -EPERM;
@@ -433,7 +433,7 @@ long (*orig_custom_syscall)(void);
  * - Ensure synchronization as needed.
  */
 static int init_function(void) {
-	int i = NR_syscalls;
+	int i;
     // initialize spin locks
     spin_lock_init(&pidlist_lock);
     spin_lock_init(&calltable_lock);
@@ -476,9 +476,9 @@ static void exit_function(void)
     spin_lock(&pidlist_lock);
     for (i = NR_syscalls; i >= 0; i--) {
         // restore original syscall if it was intercepted
-        // if (table[i].intercepted == 1) {
-        //     my_syscall(REQUEST_SYSCALL_RELEASE, i, i);
-        // }
+        if (table[i].intercepted == 1) {
+            my_syscall(REQUEST_SYSCALL_RELEASE, i, NULL);
+        }
         destroy_list(i);
     }
     spin_unlock(&pidlist_lock);
