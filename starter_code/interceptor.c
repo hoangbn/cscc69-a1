@@ -477,13 +477,13 @@ static void exit_function(void)
 	int i;
     // free memory used
     spin_lock(&pidlist_lock);
-    for (i = NR_syscalls; i >= 0; i--) {
-        // restore original syscall if it was intercepted
-        // if (table[i].intercepted == 1) {
-        //     my_syscall(REQUEST_SYSCALL_RELEASE, i, i);
-        // }
-        destroy_list(i);
-    }
+    // for (i = NR_syscalls; i >= 0; i--) {
+    //     // restore original syscall if it was intercepted
+    //     // if (table[i].intercepted == 1) {
+    //     //     my_syscall(REQUEST_SYSCALL_RELEASE, i, i);
+    //     // }
+    //     destroy_list(i);
+    // }
     spin_unlock(&pidlist_lock);
     // restore syscalls
     spin_lock(&calltable_lock);
