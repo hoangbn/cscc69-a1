@@ -342,72 +342,72 @@ asmlinkage long interceptor(struct pt_regs reg) {
  *   you might be holding, before you exit the function (including error cases!).  
  */
 asmlinkage long my_syscall(int cmd, int syscall, int pid) {
-    // // TODO: spinlocks checks!
-	// mytable cur_table;
-    // // check syscall validity
-    // if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) return -EINVAL;
-	// cur_table = table[syscall];
-    // // if cmd is 1 of the first 2
-    // if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
-    //     // check if user is root
-    //     if (current_uid() != 0) return -EPERM;
-    //     // if intercepting
-    //     if (cmd == REQUEST_SYSCALL_INTERCEPT) {
-    //         // return busy if syscall was already intercepted
-    //         if (cur_table.intercepted != 0) return -EBUSY;
-    //         spin_lock(&calltable_lock);
-    //         set_addr_rw((unsigned long)sys_call_table);
-    //         cur_table.f = sys_call_table[syscall];
-    //         sys_call_table[syscall] = interceptor;
-    //         spin_unlock(&calltable_lock);
-    //         cur_table.intercepted = 1;
-    //     } else { // if trying to release
-    //         // return invalid if call was never intercepted before
-    //         if (cur_table.intercepted != 1) return -EINVAL;
-    //         set_addr_rw((unsigned long)sys_call_table);
-    //         sys_call_table[syscall] = cur_table.f;
-    //         spin_unlock(&calltable_lock);
-    //         cur_table.intercepted = 0;
-    //     }
-    // }
-    // else { // if cmd is 1 of 2 last
-    //     // check pid validity
-    //     if (pid < 0 || pid_task(find_vpid(pid), PIDTYPE_PID) == NULL) return -EINVAL;
-    //     // check permission - pid requested must be owned by calling proccess, if not root pid != 0
-    //     if (current_uid() != 0 && (pid == 0 || check_pid_from_list(pid, current->pid) != 0)) {
-    //         return -EPERM;
-    //     }
-    //     // cannot monitor/(stop monitor) a syscall that was not intercepted before
-    //     if (cur_table.intercepted != 1) return -EINVAL;
-    //     // if cmd is to monitor
-    //     if (cmd == REQUEST_START_MONITORING) {
-    //         if (pid == 0) {
-    //             // set monitored to all monitored and remove every pid from blacklist
-    //             destroy_list(syscall);
-    //             cur_table.monitored = 2;
-    //         }
-    //         else {
-    //             // if pid is already monitored
-    //             if (check_pid_monitored(syscall, pid) == 1) return -EBUSY;
-    //             // add new pid to list if there's enough memory
-    //             cur_table.monitored = 1;
-    //             return add_pid_sysc(pid, syscall);
-    //         }
-    //     } else { // if cmd is to stop monitor
-    //         if (pid == 0) {
-    //             // set monitored no none, and remove everything from monitored list
-    //             destroy_list(syscall);
-    //         } else if (cur_table.monitored == 2) { // if everything is monitored
-    //             // if pid is already not monitored (blacklisted)
-    //             if (check_pid_monitored(syscall, pid) == 1) return -EINVAL;
-    //             // add new pid to blacklist if there's enough memory
-    //             return add_pid_sysc(pid, syscall);
-    //         } else { // if only some are monitored
-    //             // remove from monitored list (if already monitored)
-    //             return del_pid_sysc(pid, syscall);
-    //         }
-    //     }
-    // }
+    // TODO: spinlocks checks!
+	mytable cur_table;
+    // check syscall validity
+    if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) return -EINVAL;
+	cur_table = table[syscall];
+    // if cmd is 1 of the first 2
+    if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
+        // check if user is root
+        if (current_uid() != 0) return -EPERM;
+        // if intercepting
+        if (cmd == REQUEST_SYSCALL_INTERCEPT) {
+            // return busy if syscall was already intercepted
+            if (cur_table.intercepted != 0) return -EBUSY;
+            spin_lock(&calltable_lock);
+            set_addr_rw((unsigned long)sys_call_table);
+            cur_table.f = sys_call_table[syscall];
+            sys_call_table[syscall] = interceptor;
+            spin_unlock(&calltable_lock);
+            cur_table.intercepted = 1;
+        } else { // if trying to release
+            // return invalid if call was never intercepted before
+            if (cur_table.intercepted != 1) return -EINVAL;
+            set_addr_rw((unsigned long)sys_call_table);
+            sys_call_table[syscall] = cur_table.f;
+            spin_unlock(&calltable_lock);
+            cur_table.intercepted = 0;
+        }
+    }
+    else { // if cmd is 1 of 2 last
+        // check pid validity
+        if (pid < 0 || pid_task(find_vpid(pid), PIDTYPE_PID) == NULL) return -EINVAL;
+        // check permission - pid requested must be owned by calling proccess, if not root pid != 0
+        if (current_uid() != 0 && (pid == 0 || check_pid_from_list(pid, current->pid) != 0)) {
+            return -EPERM;
+        }
+        // cannot monitor/(stop monitor) a syscall that was not intercepted before
+        if (cur_table.intercepted != 1) return -EINVAL;
+        // if cmd is to monitor
+        if (cmd == REQUEST_START_MONITORING) {
+            if (pid == 0) {
+                // set monitored to all monitored and remove every pid from blacklist
+                destroy_list(syscall);
+                cur_table.monitored = 2;
+            }
+            else {
+                // if pid is already monitored
+                if (check_pid_monitored(syscall, pid) == 1) return -EBUSY;
+                // add new pid to list if there's enough memory
+                cur_table.monitored = 1;
+                return add_pid_sysc(pid, syscall);
+            }
+        } else { // if cmd is to stop monitor
+            if (pid == 0) {
+                // set monitored no none, and remove everything from monitored list
+                destroy_list(syscall);
+            } else if (cur_table.monitored == 2) { // if everything is monitored
+                // if pid is already not monitored (blacklisted)
+                if (check_pid_monitored(syscall, pid) == 1) return -EINVAL;
+                // add new pid to blacklist if there's enough memory
+                return add_pid_sysc(pid, syscall);
+            } else { // if only some are monitored
+                // remove from monitored list (if already monitored)
+                return del_pid_sysc(pid, syscall);
+            }
+        }
+    }
 	return 0;
 }
 
