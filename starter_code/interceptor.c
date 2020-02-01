@@ -482,7 +482,7 @@ static void exit_function(void)
         // if (table[i].intercepted == 1) {
         //     my_syscall(REQUEST_SYSCALL_RELEASE, i, i);
         // }
-        destroy_list(i);
+        // destroy_list(i);
     }
     spin_unlock(&pidlist_lock);
     // restore syscalls
