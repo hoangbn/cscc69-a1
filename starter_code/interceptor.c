@@ -438,7 +438,7 @@ static int init_function(void) {
     // initialize spin locks
     // spin_lock_init(&pidlist_lock);
     // spin_lock_init(&calltable_lock);
-    // spin_lock(&calltable_lock);
+    spin_lock(&calltable_lock);
     // store the original exit group syscall, and custom syscall
     orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
     orig_exit_group = sys_call_table[__NR_exit_group];
@@ -447,7 +447,7 @@ static int init_function(void) {
 	sys_call_table[__NR_exit_group] = my_exit_group;
 	sys_call_table[MY_CUSTOM_SYSCALL] = my_syscall;
 	set_addr_ro((unsigned long) sys_call_table);
-    // spin_unlock(&calltable_lock);
+    spin_unlock(&calltable_lock);
 	// bookkeeping intialization
     // spin_lock(&pidlist_lock);
     // for (i = NR_syscalls; i >= 0; i--) {
