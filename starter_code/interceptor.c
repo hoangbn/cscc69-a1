@@ -453,13 +453,13 @@ static int init_function(void) {
     spin_unlock(&calltable_lock);
     spin_lock(&pidlist_lock);
 	// bookkeeping intialization
-    for (i = NR_syscalls; i >= 0; i--) {
-        cur_table.f = sys_call_table[i];
-        cur_table.intercepted = 0;
-        cur_table.monitored = 0;
-        cur_table.listcount = 0;
-        INIT_LIST_HEAD(&cur_table.my_list);
-    }
+    // for (i = NR_syscalls; i >= 0; i--) {
+    //     cur_table.f = sys_call_table[i];
+    //     cur_table.intercepted = 0;
+    //     cur_table.monitored = 0;
+    //     cur_table.listcount = 0;
+    //     INIT_LIST_HEAD(&cur_table.my_list);
+    // }
     spin_unlock(&pidlist_lock);
     printk(KERN_DEBUG "ending init");
 	return 0;
