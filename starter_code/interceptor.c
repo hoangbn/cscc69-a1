@@ -458,7 +458,7 @@ static int init_function(void) {
     //     INIT_LIST_HEAD(&cur_table.my_list);
     // }
     // spin_unlock(&pidlist_lock);
-    printk(KERN_DEBUG "ending init");
+    // printk(KERN_DEBUG "ending init");
 	return 0;
 }
 
