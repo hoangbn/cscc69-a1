@@ -433,8 +433,8 @@ long (*orig_custom_syscall)(void);
  * - Ensure synchronization as needed.
  */
 static int init_function(void) {
-	int i = 0;
-	mytable cur_table = NULL;
+	int i;
+	mytable cur_table;
     // initialize spin locks
     // spin_lock_init(&pidlist_lock);
     // spin_lock_init(&calltable_lock);
@@ -451,6 +451,7 @@ static int init_function(void) {
 	// bookkeeping intialization
     spin_lock(&pidlist_lock);
     for (i = NR_syscalls; i >= 0; i--) {
+        cur_table = table[i];
         cur_table.f = sys_call_table[i];
         cur_table.intercepted = 0;
         cur_table.monitored = 0;
