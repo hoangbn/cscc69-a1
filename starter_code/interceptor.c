@@ -452,7 +452,6 @@ static int init_function(void) {
     spin_lock(&pidlist_lock);
     for (i = NR_syscalls; i >= 0; i--) {
         cur_table = table[i];
-        cur_table.f = sys_call_table[i];
         cur_table.intercepted = 0;
         cur_table.monitored = 0;
         cur_table.listcount = 0;
