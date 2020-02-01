@@ -436,8 +436,8 @@ static int init_function(void) {
 	// mytable cur_table;
     // printk(KERN_DEBUG "Started init");
     // initialize spin locks
-    spin_lock_init(&pidlist_lock);
-    spin_lock_init(&calltable_lock);
+    // spin_lock_init(&pidlist_lock);
+    // spin_lock_init(&calltable_lock);
     // spin_lock(&calltable_lock);
     // store the original exit group syscall, and custom syscall
     orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
