@@ -477,7 +477,7 @@ static void exit_function(void)
     for (i = NR_syscalls; i >= 0; i--) {
         // restore original syscall if it was intercepted
         if (table[i].intercepted == 1) {
-            my_syscall(REQUEST_SYSCALL_RELEASE, i, NULL);
+            my_syscall(REQUEST_SYSCALL_RELEASE, i, 0);
         }
         destroy_list(i);
     }
