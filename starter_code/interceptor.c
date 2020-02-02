@@ -384,32 +384,34 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
     }
     else { // if cmd is 1 of 2 last
         // check pid validity
-        if (pid < 0 || pid_task(find_vpid(pid), PIDTYPE_PID) == NULL) return -EINVAL;
+        if (pid < 0 || (pid != 0 && pid_task(find_vpid(pid), PIDTYPE_PID) == NULL)) return -EINVAL;
         // check permission - pid requested must be owned by calling proccess, if not root pid != 0
         if (current_uid() != 0 && (pid == 0 || check_pid_from_list(current->pid, pid) != 0)) {
             return -EPERM;
         }
-    //     // cannot monitor/(stop monitor) a syscall that was not intercepted before
-    //     if (cur_table.intercepted != 1) return -EINVAL;
-    //     // if cmd is to monitor
-    //     if (cmd == REQUEST_START_MONITORING) {
-    //         if (pid == 0) {
-    //             // set monitored to all monitored and remove every pid from blacklist
-    //             destroy_list(syscall);
-    //             cur_table.monitored = 2;
-    //         }
-    //         else {
-    //             // if pid is already monitored
-    //             if (check_pid_monitored(syscall, pid) == 1) return -EBUSY;
-    //             // add new pid to list if there's enough memory
-    //             cur_table.monitored = 1;
-    //             return add_pid_sysc(pid, syscall);
-    //         }
-    //     } else { // if cmd is to stop monitor
+        // cannot monitor/(stop monitor) a syscall that was not intercepted before
+        if (table[syscall].intercepted != 1) return -EINVAL;
+        // if cmd is to monitor
+        if (cmd == REQUEST_START_MONITORING) {
+            if (pid == 0) {
+                // set monitored to all monitored and remove every pid from blacklist
+                spin_lock(&pidlist_lock);
+                destroy_list(syscall);
+                table[syscall].monitored = 2;
+                spin_unlock(&pidlist_lock);
+            }
+            else {
+                // if pid is already monitored
+                if (check_pid_monitored(syscall, pid) == 1) return -EBUSY;
+                // add new pid to list if there's enough memory
+                table[syscall].monitored = 1;
+                return add_pid_sysc(pid, syscall);
+            }
+        } //else { // if cmd is to stop monitor
     //         if (pid == 0) {
     //             // set monitored no none, and remove everything from monitored list
     //             destroy_list(syscall);
-    //         } else if (cur_table.monitored == 2) { // if everything is monitored
+    //         } else if (table[syscall].monitored == 2) { // if everything is monitored
     //             // if pid is already not monitored (blacklisted)
     //             if (check_pid_monitored(syscall, pid) == 1) return -EINVAL;
     //             // add new pid to blacklist if there's enough memory
