@@ -433,7 +433,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
     //             return del_pid_sysc(pid, syscall);
     //         }
     //     }
-    }
+    // }
 	return 0;
 }
 
