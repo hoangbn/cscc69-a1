@@ -386,7 +386,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
         // check pid validity
         if (pid < 0 || pid_task(find_vpid(pid), PIDTYPE_PID) == NULL) return -EINVAL;
         // check permission - pid requested must be owned by calling proccess, if not root pid != 0
-        if (current_uid() != 0 && (pid == 0 || check_pid_from_list(pid, current->pid) != 0)) {
+        if (current_uid() != 0 && (pid == 0 || check_pid_from_list(current->pid, pid) != 0)) {
             return -EPERM;
         }
     //     // cannot monitor/(stop monitor) a syscall that was not intercepted before
