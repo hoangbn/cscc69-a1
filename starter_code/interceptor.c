@@ -382,13 +382,13 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
             spin_unlock(&pidlist_lock);
         }
     }
-    // else { // if cmd is 1 of 2 last
-    //     // check pid validity
-    //     if (pid < 0 || pid_task(find_vpid(pid), PIDTYPE_PID) == NULL) return -EINVAL;
-    //     // check permission - pid requested must be owned by calling proccess, if not root pid != 0
-    //     if (current_uid() != 0 && (pid == 0 || check_pid_from_list(pid, current->pid) != 0)) {
-    //         return -EPERM;
-    //     }
+    else { // if cmd is 1 of 2 last
+        // check pid validity
+        if (pid < 0 || pid_task(find_vpid(pid), PIDTYPE_PID) == NULL) return -EINVAL;
+        // check permission - pid requested must be owned by calling proccess, if not root pid != 0
+        if (current_uid() != 0 && (pid == 0 || check_pid_from_list(pid, current->pid) != 0)) {
+            return -EPERM;
+        }
     //     // cannot monitor/(stop monitor) a syscall that was not intercepted before
     //     if (cur_table.intercepted != 1) return -EINVAL;
     //     // if cmd is to monitor
@@ -419,7 +419,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
     //             return del_pid_sysc(pid, syscall);
     //         }
     //     }
-    // }
+    }
 	return 0;
 }
 
