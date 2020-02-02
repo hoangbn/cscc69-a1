@@ -407,20 +407,22 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
                 table[syscall].monitored = 1;
                 return add_pid_sysc(pid, syscall);
             }
-        } //else { // if cmd is to stop monitor
-    //         if (pid == 0) {
-    //             // set monitored no none, and remove everything from monitored list
-    //             destroy_list(syscall);
-    //         } else if (table[syscall].monitored == 2) { // if everything is monitored
-    //             // if pid is already not monitored (blacklisted)
-    //             if (check_pid_monitored(syscall, pid) == 1) return -EINVAL;
-    //             // add new pid to blacklist if there's enough memory
-    //             return add_pid_sysc(pid, syscall);
-    //         } else { // if only some are monitored
-    //             // remove from monitored list (if already monitored)
-    //             return del_pid_sysc(pid, syscall);
-    //         }
-    //     }
+        } else { // if cmd is to stop monitor
+            if (pid == 0) {
+                // set monitored no none, and remove everything from monitored list
+                spin_lock(&pidlist_lock);
+                destroy_list(syscall);
+                spin_unlock(&pidlist_lock);
+            } else if (table[syscall].monitored == 2) { // if everything is monitored
+                // if pid is already not monitored (blacklisted)
+                if (check_pid_monitored(syscall, pid) == 1) return -EINVAL;
+                // add new pid to blacklist if there's enough memory
+                return add_pid_sysc(pid, syscall);
+            } else { // if only some are monitored
+                // remove from monitored list (if already monitored)
+                return del_pid_sysc(pid, syscall);
+            }
+        }
     }
 	return 0;
 }
