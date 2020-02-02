@@ -364,24 +364,24 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
     // if ((cur_table.intercepted == 1 && cmd == REQUEST_SYSCALL_INTERCEPT) return -EBUSY; 
     
     // if cmd is 1 of the first 2
-    // if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
-    //     // check if user is root
-    //     if (current_uid() != 0) return -EPERM;
-    //     // if intercepting
-    //     if (cmd == REQUEST_SYSCALL_INTERCEPT) {
-    //         // return busy if syscall was already intercepted
-    //         if (table[syscall].intercepted != 0) return -EBUSY;
-    //         // store original syscall, hijack syscall, updated intercepted status
-    //         spin_lock(&pidlist_lock);
-    //         spin_lock(&calltable_lock);
-    //         table[syscall].f = sys_call_table[syscall];
-    //         set_addr_rw((unsigned long) sys_call_table);
-    //         sys_call_table[syscall] = interceptor;
-    //         set_addr_ro((unsigned long) sys_call_table);
-    //         table[syscall].intercepted = 1;
-    //         spin_unlock(&pidlist_lock);
-    //         spin_unlock(&calltable_lock);
-    //     } else { // if trying to release
+    if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
+        // check if user is root
+        if (current_uid() != 0) return -EPERM;
+        // if intercepting
+        if (cmd == REQUEST_SYSCALL_INTERCEPT) {
+            // return busy if syscall was already intercepted
+            if (table[syscall].intercepted != 0) return -EBUSY;
+            // store original syscall, hijack syscall, updated intercepted status
+            spin_lock(&pidlist_lock);
+            spin_lock(&calltable_lock);
+            table[syscall].f = sys_call_table[syscall];
+            set_addr_rw((unsigned long) sys_call_table);
+            sys_call_table[syscall] = interceptor;
+            set_addr_ro((unsigned long) sys_call_table);
+            table[syscall].intercepted = 1;
+            spin_unlock(&pidlist_lock);
+            spin_unlock(&calltable_lock);
+        } //else { // if trying to release
     //         // return invalid if call was never intercepted before
     //         if (table[syscall].intercepted != 1) return -EINVAL;
     //         spin_lock(&calltable_lock);
