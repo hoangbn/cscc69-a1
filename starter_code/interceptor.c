@@ -347,20 +347,6 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
         cmd != REQUEST_START_MONITORING && cmd != REQUEST_STOP_MONITORING) return -EINVAL;
     // check syscall validity
     if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) return -EINVAL;
-	// check permission of all commands and pid validity for last 2 commands 
-    // if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
-    //     if (current_uid() != 0) return -EPERM;
-    // } else {
-    //     if (pid < 0 || (pid != 0 && pid_task(find_vpid(pid), PIDTYPE_PID) == NULL)) return -EINVAL;
-    //     if (current_uid() != 0 && (pid == 0 || check_pid_from_list(current->pid, pid) != 0)) {
-    //         return -EPERM;
-    //     }
-    // }
-    // cur_table = table[syscall];
-    // check context of commands, and busy conditions will be checked within
-    // if (cur_table.intercepted == 0 && cmd != REQUEST_SYSCALL_INTERCEPT) return -EINVAL;
-    // if ((cur_table.intercepted == 1 && cmd == REQUEST_SYSCALL_INTERCEPT) return -EBUSY; 
-    
     // if cmd is 1 of the first 2
     if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
         // check if user is root
@@ -374,26 +360,27 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
             table[syscall].intercepted = 1;
             table[syscall].f = sys_call_table[syscall];
             spin_unlock(&pidlist_lock);
-            
+
             spin_lock(&calltable_lock);
             set_addr_rw((unsigned long) sys_call_table);
             sys_call_table[syscall] = interceptor;
             set_addr_ro((unsigned long) sys_call_table);
             spin_unlock(&calltable_lock);
-        } //else { // if trying to release
-        //     // return invalid if call was never intercepted before
-        //     if (table[syscall].intercepted != 1) return -EINVAL;
-        //     // restore original call, clear monitored list, update intercepted status
-        //     spin_lock(&calltable_lock);
-        //     spin_lock(&pidlist_lock);
-        //     set_addr_rw((unsigned long) sys_call_table);
-        //     sys_call_table[syscall] = cur_table.f;
-        //     set_addr_ro((unsigned long) sys_call_table);
-        //     destroy_list(syscall);
-        //     table[syscall].intercepted = 0;
-        //     spin_unlock(&pidlist_lock);
-        //     spin_unlock(&calltable_lock);
-        // }
+        } else { // if trying to release
+            // return invalid if call was never intercepted before
+            if (table[syscall].intercepted != 1) return -EINVAL;
+            // restore original call, clear monitored list, update intercepted status
+            spin_lock(&calltable_lock);
+            set_addr_rw((unsigned long) sys_call_table);
+            sys_call_table[syscall] = table[syscall].f;
+            set_addr_ro((unsigned long) sys_call_table);
+            spin_unlock(&calltable_lock);
+
+            spin_lock(&pidlist_lock);
+            destroy_list(syscall);
+            table[syscall].intercepted = 0;
+            spin_unlock(&pidlist_lock);
+        }
     }
     // else { // if cmd is 1 of 2 last
     //     // check pid validity
