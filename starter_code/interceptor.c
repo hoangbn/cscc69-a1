@@ -251,8 +251,12 @@ void (*orig_exit_group)(int);
  * Don't forget to call the original exit_group.
  */
 void my_exit_group(int status)
-{	
+{
+    spin_lock(&pidlist_lock);
+	// Delete the exiting process's PID (current->pid) from all lists
 	del_pid(current->pid);
+    spin_unlock(&pidlist_lock);
+	// Call the orig_exit_group() function
 	orig_exit_group(status);
 }
 //----------------------------------------------------------------
@@ -277,9 +281,9 @@ void my_exit_group(int status)
  */
 asmlinkage long interceptor(struct pt_regs reg) {
     mytable cur_table = table[reg.ax];
+    spin_lock(&pidlist_lock);
     int monitored = cur_table.monitored;
     // if the current pid is monitored
-    spin_lock(&calltable_lock);
     if (monitored != 0) {
 		int pid_in_list = check_pid_monitored(reg.ax, current->pid);
 		// log if monitored, and pid in list or everything is monitored and pid not blacklisted
@@ -287,9 +291,9 @@ asmlinkage long interceptor(struct pt_regs reg) {
 			log_message(current->pid, reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp);
 		}
     }
-    spin_unlock(&calltable_lock);
-    // continue
-	return cur_table.f(reg); // Just a placeholder, so it compiles with no warnings!
+    spin_unlock(&pidlist_lock);
+
+	return cur_table.f(reg);
 }
 
 /**
@@ -347,6 +351,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
         cmd != REQUEST_START_MONITORING && cmd != REQUEST_STOP_MONITORING) return -EINVAL;
     // check syscall validity
     if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) return -EINVAL;
+
     // if cmd is 1 of the first 2
     if (cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE) {
         // check if user is root
@@ -355,7 +360,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
         if (cmd == REQUEST_SYSCALL_INTERCEPT) {
             // return busy if syscall was already intercepted
             if (table[syscall].intercepted != 0) return -EBUSY;
-            // store original syscall, hijack syscall, updated intercepted status
+            // store original syscall, hijack syscall, update intercepted status
             spin_lock(&pidlist_lock);
             table[syscall].intercepted = 1;
             table[syscall].f = sys_call_table[syscall];
@@ -366,7 +371,8 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
             sys_call_table[syscall] = interceptor;
             set_addr_ro((unsigned long) sys_call_table);
             spin_unlock(&calltable_lock);
-        } else { // if trying to release
+        }
+        else { // if trying to release
             // return invalid if call was never intercepted before
             if (table[syscall].intercepted != 1) return -EINVAL;
             // restore original call, clear monitored list, update intercepted status
@@ -407,18 +413,27 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
                 table[syscall].monitored = 1;
                 return add_pid_sysc(pid, syscall);
             }
-        } else { // if cmd is to stop monitor
+        }
+        // if cmd is to stop monitor
+        else {
+            // if we want to stop monitoring for all PIDs
             if (pid == 0) {
                 // set monitored no none, and remove everything from monitored list
                 spin_lock(&pidlist_lock);
                 destroy_list(syscall);
                 spin_unlock(&pidlist_lock);
-            } else if (table[syscall].monitored == 2) { // if everything is monitored
+            }
+            // Otherwise, we want to stop monitoring for the given specific PID:
+
+            // if everything is monitored
+            else if (table[syscall].monitored == 2) {
                 // if pid is already not monitored (blacklisted)
                 if (check_pid_monitored(syscall, pid) == 1) return -EINVAL;
                 // add new pid to blacklist if there's enough memory
                 return add_pid_sysc(pid, syscall);
-            } else { // if only some are monitored
+            }
+            // if only some are monitored
+            else {
                 // remove from monitored list (if already monitored)
                 return del_pid_sysc(pid, syscall);
             }
